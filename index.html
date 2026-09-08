@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menstrual Product Standards Database</title>
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Young+Serif&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <!-- Header Banner -->
+    <header>
+        <a href="#" class="back-btn">Back to rhsupplies.org</a>
+        <h1>Menstrual Product Standards Database</h1>
+        <p class="header-desc">Explore, search, and compare regional and national standards for menstrual products around the world.</p>
+        <a href="#" class="header-link">Learn more about standards for menstrual health</a>
+    </header>
+
+    <div class="container">
+        <!-- Interactive Map -->
+        <div class="map-wrapper">
+            <div id="map"></div>
+        </div>
+
+        <!-- Controls (Search & Filters) -->
+        <div class="controls-section">
+            <div class="search-box">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" id="searchInput" placeholder="Search for standards, products, countries...">
+            </div>
+
+            <div class="filters-grid">
+                <select id="countryFilter" class="filter-select">
+                    <option value="">Country: All</option>
+                </select>
+                <select id="incomeFilter" class="filter-select">
+                    <option value="">Income Level: All</option>
+                </select>
+                <select id="productFilter" class="filter-select">
+                    <option value="">Primary Product: All</option>
+                </select>
+                <select id="isoFilter" class="filter-select">
+                    <option value="">ISO Participation: All</option>
+                </select>
+                <button class="reset-btn" onclick="resetFilters()">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">restart_alt</span> Reset Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Sortable Results Table -->
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 80px; text-align: center;">Compare</th>
+                        <th data-col="Country" onclick="sortTable('Country')">Country <span class="sort-icon">▲</span></th>
+                        <th data-col="Standard Number/Code" onclick="sortTable('Standard Number/Code')">Standard Code <span class="sort-icon">↕</span></th>
+                        <th data-col=" Primary Products included" onclick="sortTable(' Primary Products included')">Product <span class="sort-icon">↕</span></th>
+                        <th data-col="Year of Issue/Revision" onclick="sortTable('Year of Issue/Revision')">Year <span class="sort-icon">↕</span></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Floating Bar for Compare Action -->
+    <div id="compareBar" class="compare-bar">
+        <span id="compareCount">0 selected (Max 3)</span>
+        <button onclick="openCompareModal()">Compare Standards</button>
+        <button class="clear-btn" onclick="clearCompare()">Clear</button>
+    </div>
+
+    <!-- Modal 1: Single Entry Details -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modalTitle" class="modal-title"></h2>
+                <div class="modal-actions">
+                    <button class="print-btn" onclick="printDetailModal()" aria-label="Print standard details" title="Print standard details">
+                        <span class="material-symbols-outlined">print</span>
+                    </button>
+                    <button class="close-btn" onclick="closeModal('detailModal')" aria-label="Close details">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="modalDirectLink"></div>
+                <div class="detail-grid">
+                    <!-- Column 1: Metadata -->
+                    <div>
+                        
+
+                        <div class="field-label">Primary Product</div>
+                        <div id="modalProduct" class="field-value"></div>
+
+                        <div class="field-label">Region</div>
+                        <div id="modalRegion" class="field-value"></div>
+
+                        <div class="field-label">Income Category</div>
+                        <div id="modalIncome" class="field-value"></div>
+
+                        <div class="field-label">ISO Participation</div>
+                        <div id="modalIso" class="field-value"></div>
+
+                        <div class="field-label">Year of Issue / Revision</div>
+                        <div id="modalYear" class="field-value"></div>
+
+                        <div class="field-label">Standard Number / Code</div>
+                        <div id="modalStandardNum" class="field-value"></div>
+
+                        <div class="field-label">Language</div>
+                        <div id="modalLanguage" class="field-value"></div>
+
+                        <div class="field-label">Issuing Authority</div>
+                        <div id="modalAuthority" class="field-value"></div>
+
+                        <div class="field-label">Mandatory / Voluntary</div>
+                        <div id="modalMandatory" class="field-value"></div>
+
+                        <div class="field-label">Regulatory Treatment</div>
+                        <div id="modalRegulatory" class="field-value"></div>
+
+                        <div class="field-label">Paywall</div>
+                        <div id="modalPaywall" class="field-value"></div>
+
+                        <div class="field-label">Scope as per standard</div>
+                        <div id="modalScope" class="field-value"></div>
+                    </div>
+
+                    <!-- Column 2: Parameters -->
+                    <div>
+                        <div class="param-list" id="modalParamList">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Matrix Comparison View -->
+    <div id="compareModal" class="modal-overlay">
+        <div class="modal-card modal-compare-card">
+            <div class="modal-header">
+                <h2 class="modal-title">Compare standards</h2>
+                <div class="modal-actions">
+                    <button class="print-btn" onclick="printCompareModal()" aria-label="Print comparison" title="Print comparison">
+                        <span class="material-symbols-outlined">print</span>
+                    </button>
+                    <button class="close-btn" onclick="closeModal('compareModal')" aria-label="Close comparison">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table class="compare-table" id="compareTable">
+                    <!-- Populated dynamically -->
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
