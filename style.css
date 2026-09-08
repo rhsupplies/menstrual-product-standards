@@ -147,19 +147,95 @@ input[type="text"]{
     align-items: center;
 }
 
-.filter-select {
-    appearance: none;
+.filter-dropdown {
+    position: relative;
     width: 100%;
-    padding: 14px 35px 14px 18px;
+}
+
+.filter-summary {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px 18px;
     border-radius: 30px;
     border: 1px solid #D5D4D7;
-    background: #ffffff url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 15px center;
-    background-size: 10px auto;
+    background: #ffffff;
     font-size: 15px;
     font-weight: 400;
     color: var(--text-main);
     cursor: pointer;
+    user-select: none;
     outline: none;
+    min-height: 48px;
+    box-sizing: border-box;
+}
+
+.filter-summary::-webkit-details-marker {
+    display: none;
+}
+
+.filter-summary span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filter-summary .dropdown-arrow {
+    font-size: 20px;
+    color: var(--text-main);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.filter-dropdown[open] .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.filter-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 100%;
+    min-width: 220px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-main);
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+.filter-option:hover {
+    background: #f1f7fa;
+}
+
+.filter-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .reset-btn {
@@ -177,6 +253,7 @@ input[type="text"]{
     cursor: pointer;
     transition: all 0.2s;
     height: 100%;
+    min-height: 48px;
 }
 
 .reset-btn:hover {

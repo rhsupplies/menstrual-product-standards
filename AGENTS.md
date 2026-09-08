@@ -38,12 +38,19 @@ Each record contains:
 
 ### 1. Search & Filtering
 - **Search Input**: Full-text search across standards, products, countries (in `#searchInput`)
-- **Filters**: Country dropdown, Income Level, Product Type
-- **Implementation**: Search/filter logic in `app.js` updates `currentData` array; UI refreshes with results
+- **Multi-Select Filters**: Vanilla `<details>`/`<summary>` dropdowns with native checkboxes for Country, Income Level, Primary Product, and ISO Participation.
+  - Option items display record counts dynamically.
+  - Filter state is managed via `selectedFilters` (`Country`, `Income`, `Product`, `ISO` as `Set` objects).
+  - Filtering logic supports multiple values simultaneously (OR within a category, AND across categories, combined with full-text search).
+- **Reset**: "Reset Filters" unchecks all checkboxes, clears search, resets dropdown labels, and restores map pins to full opacity.
 
 ### 2. Interactive Map
-- **Leaflet Integration**: Map initialized with country markers
-- **Markers**: Clickable markers at `countryCoords` show available standards for that country
+- **Leaflet Integration**: Map initialized with markers at `countryCoords`.
+- **Persistent Multi-Pin Selection**:
+  - All country pins remain visible on the map at all times (unselected pins do not disappear).
+  - Clicking a pin toggles that country in `selectedFilters.Country` (multi-select).
+  - Selected country pins display at full opacity (1.0), while unselected pins remain visible at dimmed opacity (0.35).
+  - Bi-directional sync: clicking a pin toggles the Country dropdown checkbox and label; selecting/deselecting checkboxes updates pin opacities.
 - **Map Container**: `<div id="map"></div>`
 
 ### 3. Results Display

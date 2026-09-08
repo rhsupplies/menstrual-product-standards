@@ -41,18 +41,38 @@
             </div>
 
             <div class="filters-grid">
-                <select id="countryFilter" class="filter-select">
-                    <option value="">Country: All</option>
-                </select>
-                <select id="incomeFilter" class="filter-select">
-                    <option value="">Income Level: All</option>
-                </select>
-                <select id="productFilter" class="filter-select">
-                    <option value="">Primary Product: All</option>
-                </select>
-                <select id="isoFilter" class="filter-select">
-                    <option value="">ISO Participation: All</option>
-                </select>
+                <details class="filter-dropdown" id="countryDropdown">
+                    <summary class="filter-summary">
+                        <span id="countryFilterLabel">Country: All</span>
+                        <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                    </summary>
+                    <div class="filter-options" id="countryOptions"></div>
+                </details>
+
+                <details class="filter-dropdown" id="incomeDropdown">
+                    <summary class="filter-summary">
+                        <span id="incomeFilterLabel">Income Level: All</span>
+                        <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                    </summary>
+                    <div class="filter-options" id="incomeOptions"></div>
+                </details>
+
+                <details class="filter-dropdown" id="productDropdown">
+                    <summary class="filter-summary">
+                        <span id="productFilterLabel">Primary Product: All</span>
+                        <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                    </summary>
+                    <div class="filter-options" id="productOptions"></div>
+                </details>
+
+                <details class="filter-dropdown" id="isoDropdown">
+                    <summary class="filter-summary">
+                        <span id="isoFilterLabel">ISO Participation: All</span>
+                        <span class="material-symbols-outlined dropdown-arrow">expand_more</span>
+                    </summary>
+                    <div class="filter-options" id="isoOptions"></div>
+                </details>
+
                 <button class="reset-btn" onclick="resetFilters()">
                     <span class="material-symbols-outlined" style="font-size: 18px;">restart_alt</span> Reset Filters
                 </button>

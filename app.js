@@ -34,6 +34,7 @@ const countryCoords = {
     "New Zealand": [-40.9006, 174.8860],
     "Nigeria": [9.0820, 8.6753],
     "Pakistan": [30.3753, 69.3451],
+    "Russian Federation": [61.5240, 105.3188],
     "Russian federation": [61.5240, 105.3188],
     "South Africa": [-30.5595, 22.9375],
     "South Korea": [35.9078, 127.7669],
@@ -50,13 +51,24 @@ let selectedCompareIndices = [];
 let sortAscending = true;
 let lastSortedColumn = 'Country'; // Default sort column
 
+// Multi-select Filter State
+const selectedFilters = {
+    Country: new Set(),
+    Income: new Set(),
+    Product: new Set(),
+    ISO: new Set()
+};
+
+const filterLabels = {
+    Country: { id: 'countryFilterLabel', defaultText: 'Country: All', prefix: 'Country' },
+    Income: { id: 'incomeFilterLabel', defaultText: 'Income Level: All', prefix: 'Income Level' },
+    Product: { id: 'productFilterLabel', defaultText: 'Primary Product: All', prefix: 'Primary Product' },
+    ISO: { id: 'isoFilterLabel', defaultText: 'ISO Participation: All', prefix: 'ISO Participation' }
+};
+
 // DOM Elements
 const tableBody = document.getElementById('tableBody');
 const searchInput = document.getElementById('searchInput');
-const countryFilter = document.getElementById('countryFilter');
-const incomeFilter = document.getElementById('incomeFilter');
-const productFilter = document.getElementById('productFilter');
-const isoFilter = document.getElementById('isoFilter');
 const compareBar = document.getElementById('compareBar');
 const compareCount = document.getElementById('compareCount');
 
@@ -78,6 +90,7 @@ const goldIcon = L.divIcon({
 
 // Layer group to allow dynamic updating of markers
 const markersLayer = L.layerGroup().addTo(map);
+const countryMarkers = {};
 
 // Sort Helper Function
 function sortDataByField(dataArray, fieldKey, ascending = true) {
@@ -99,10 +112,10 @@ window.addEventListener('DOMContentLoaded', () => {
             database = data;
             currentData = [...database];
             populateFilterDropdowns();
+            initMapMarkers();
             // Sort initial dataset alphabetically by Country
             sortDataByField(currentData, 'Country', true);
             renderTable(currentData);
-            updateMapMarkers(currentData);
         })
         .catch(error => {
             console.error('Error loading database JSON:', error);
@@ -110,57 +123,128 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Event Listeners
     searchInput.addEventListener('input', applyFilters);
-    countryFilter.addEventListener('change', applyFilters);
-    incomeFilter.addEventListener('change', applyFilters);
-    productFilter.addEventListener('change', applyFilters);
-    isoFilter.addEventListener('change', applyFilters);
+
+    // Close open details dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.filter-dropdown')) {
+            document.querySelectorAll('.filter-dropdown[open]').forEach(dd => dd.removeAttribute('open'));
+        }
+    });
+
+    // Ensure only one dropdown is open at a time
+    document.querySelectorAll('.filter-dropdown').forEach(dd => {
+        dd.addEventListener('toggle', () => {
+            if (dd.open) {
+                document.querySelectorAll('.filter-dropdown[open]').forEach(other => {
+                    if (other !== dd) other.removeAttribute('open');
+                });
+            }
+        });
+    });
 });
 
-// Dynamic Map Markers setup (reflects active filters)
-function updateMapMarkers(data) {
+// Map Markers: Keep all pins persistent on the map; adjust opacity based on selection
+function initMapMarkers() {
     markersLayer.clearLayers();
-    const activeCountries = [...new Set(data.map(item => item.Country.trim()))];
-    activeCountries.forEach(country => {
-        if (countryCoords[country]) {
-            const count = data.filter(d => d.Country.trim() === country).length;
-            const marker = L.marker(countryCoords[country], { icon: goldIcon });
-            marker.bindTooltip(`<b>${country}</b> (${count} standard${count > 1 ? 's' : ''})`);
-            marker.on('click', () => {
-                countryFilter.value = country;
-                applyFilters();
-                document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth' });
-            });
-            markersLayer.addLayer(marker);
+    const allCountries = [...new Set(database.map(d => d.Country.trim()))].filter(c => countryCoords[c]);
+
+    allCountries.forEach(country => {
+        const count = database.filter(d => d.Country.trim() === country).length;
+        const marker = L.marker(countryCoords[country], { icon: goldIcon });
+        marker.bindTooltip(`<b>${country}</b> (${count} standard${count > 1 ? 's' : ''})`);
+        marker.on('click', () => {
+            toggleCountryFromMap(country);
+        });
+        markersLayer.addLayer(marker);
+        countryMarkers[country] = marker;
+    });
+}
+
+function updateMapMarkers() {
+    const hasSelection = selectedFilters.Country.size > 0;
+    Object.keys(countryMarkers).forEach(country => {
+        const marker = countryMarkers[country];
+        if (hasSelection) {
+            marker.setOpacity(selectedFilters.Country.has(country) ? 1.0 : 0.35);
+        } else {
+            marker.setOpacity(1.0);
         }
     });
 }
 
-// Populate Dropdowns dynamically
-function populateFilterDropdowns() {
-    const getUnique = (key) => [...new Set(database.map(d => (d[key] || '').trim()).filter(Boolean))].sort();
-
-    getUnique('Country').forEach(c => countryFilter.innerHTML += `<option value="${c}">${c}</option>`);
-    getUnique('Income category').forEach(i => incomeFilter.innerHTML += `<option value="${i}">${i}</option>`);
-    getUnique('ISO participation').forEach(iso => isoFilter.innerHTML += `<option value="${iso}">${iso}</option>`);
-
-    const products = [...new Set(database.map(d => d[' Primary Products included'].trim()).filter(Boolean))].sort();
-    products.forEach(p => productFilter.innerHTML += `<option value="${p}">${p}</option>`);
+function toggleCountryFromMap(country) {
+    const checkbox = document.querySelector(`#countryOptions input[value="${CSS.escape(country)}"]`);
+    if (selectedFilters.Country.has(country)) {
+        selectedFilters.Country.delete(country);
+        if (checkbox) checkbox.checked = false;
+    } else {
+        selectedFilters.Country.add(country);
+        if (checkbox) checkbox.checked = true;
+    }
+    updateFilterLabel('Country');
+    applyFilters();
+    document.querySelector('.table-card').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Filter Function
+// Populate Dropdowns with Checkboxes dynamically
+function populateFilterDropdowns() {
+    renderFilterOptions('Country', 'countryOptions', 'Country');
+    renderFilterOptions('Income', 'incomeOptions', 'Income category');
+    renderFilterOptions('Product', 'productOptions', ' Primary Products included');
+    renderFilterOptions('ISO', 'isoOptions', 'ISO participation');
+}
+
+function renderFilterOptions(filterKey, containerId, dataField) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const counts = {};
+    database.forEach(item => {
+        const val = (item[dataField] || '').trim();
+        if (val) counts[val] = (counts[val] || 0) + 1;
+    });
+    const uniqueValues = Object.keys(counts).sort();
+    container.innerHTML = uniqueValues.map(val => `
+        <label class="filter-option">
+            <input type="checkbox" value="${val.replace(/"/g, '&quot;')}" onchange="toggleFilter('${filterKey}', this)">
+            <span>${val} (${counts[val]})</span>
+        </label>
+    `).join('');
+}
+
+function toggleFilter(filterKey, checkbox) {
+    if (checkbox.checked) {
+        selectedFilters[filterKey].add(checkbox.value);
+    } else {
+        selectedFilters[filterKey].delete(checkbox.value);
+    }
+    updateFilterLabel(filterKey);
+    applyFilters();
+}
+
+function updateFilterLabel(filterKey) {
+    const config = filterLabels[filterKey];
+    const elem = document.getElementById(config.id);
+    if (!elem) return;
+    const selected = selectedFilters[filterKey];
+    if (selected.size === 0) {
+        elem.textContent = config.defaultText;
+    } else if (selected.size === 1) {
+        elem.textContent = `${config.prefix}: ${Array.from(selected)[0]}`;
+    } else {
+        elem.textContent = `${config.prefix} (${selected.size})`;
+    }
+}
+
+// Filter Function supporting multiple checkbox values
 function applyFilters() {
-    const query = searchInput.value.toLowerCase();
-    const countryVal = countryFilter.value;
-    const incomeVal = incomeFilter.value;
-    const productVal = productFilter.value;
-    const isoVal = isoFilter.value;
+    const query = searchInput.value.toLowerCase().trim();
 
     currentData = database.filter(item => {
-        const matchesSearch = Object.values(item).some(val => String(val).toLowerCase().includes(query));
-        const matchesCountry = !countryVal || item.Country.trim() === countryVal;
-        const matchesIncome = !incomeVal || (item['Income category'] || '').trim() === incomeVal;
-        const matchesProduct = !productVal || (item[' Primary Products included'] || '').trim() === productVal;
-        const matchesIso = !isoVal || (item['ISO participation'] || '').trim() === isoVal;
+        const matchesSearch = !query || Object.values(item).some(val => String(val).toLowerCase().includes(query));
+        const matchesCountry = selectedFilters.Country.size === 0 || selectedFilters.Country.has(item.Country.trim());
+        const matchesIncome = selectedFilters.Income.size === 0 || selectedFilters.Income.has((item['Income category'] || '').trim());
+        const matchesProduct = selectedFilters.Product.size === 0 || selectedFilters.Product.has((item[' Primary Products included'] || '').trim());
+        const matchesIso = selectedFilters.ISO.size === 0 || selectedFilters.ISO.has((item['ISO participation'] || '').trim());
 
         return matchesSearch && matchesCountry && matchesIncome && matchesProduct && matchesIso;
     });
@@ -168,17 +252,19 @@ function applyFilters() {
     // Maintain current sorting field and order
     sortDataByField(currentData, lastSortedColumn, sortAscending);
     renderTable(currentData);
-    updateMapMarkers(currentData);
+    updateMapMarkers();
 }
 
 // Reset Filters Function
 function resetFilters() {
     searchInput.value = '';
-    countryFilter.value = '';
-    incomeFilter.value = '';
-    productFilter.value = '';
-    isoFilter.value = '';
-    
+    Object.keys(selectedFilters).forEach(key => {
+        selectedFilters[key].clear();
+        updateFilterLabel(key);
+    });
+    document.querySelectorAll('.filter-dropdown input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.filter-dropdown[open]').forEach(dd => dd.removeAttribute('open'));
+
     // Reset sorting to Country Ascending
     lastSortedColumn = 'Country';
     sortAscending = true;
