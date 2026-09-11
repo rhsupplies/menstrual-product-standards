@@ -20,7 +20,8 @@ Interactive web application for exploring, searching, and comparing menstrual pr
 ├── index.html         # Main entry point; contains header, map, controls, and results UI
 ├── app.js            # Core application logic: data fetching, filtering, search, comparison
 ├── style.css         # Styling with color variables and responsive layout
-└── data.json         # JSON database of menstrual product standards by country
+├── data.json         # JSON database of menstrual product standards by country
+└── countries.geo.json # Lightweight GeoJSON boundary dataset for choropleth map highlighting
 ```
 
 ## Data Model
@@ -32,7 +33,7 @@ Each record contains:
 - **Products & Scope**: Product types (tampons, pads), primary products included
 - **Parameters Tracked** (boolean flags): Physical parameters, Absorbency, pH, Microbiological requirements, Sampling, Packaging, User Info, Chemical/heavy metal, Color fastness, Biocompatibility
 
-**Country Coordinates**: Hardcoded in `app.js` (`countryCoords` object) for map positioning.
+**Country Boundaries**: Loaded from `countries.geo.json` and matched to records via country name normalization.
 
 ## Key Features & Implementation
 
@@ -42,24 +43,34 @@ Each record contains:
   - Option items display record counts dynamically.
   - Filter state is managed via `selectedFilters` (`Country`, `Income`, `Product`, `ISO` as `Set` objects).
   - Filtering logic supports multiple values simultaneously (OR within a category, AND across categories, combined with full-text search).
-- **Reset**: "Reset Filters" unchecks all checkboxes, clears search, resets dropdown labels, and restores map pins to full opacity.
+- **Reset**: "Reset Filters" unchecks all checkboxes, clears search, resets dropdown labels, and restores map polygon styles.
 
-### 2. Interactive Map
-- **Leaflet Integration**: Map initialized with markers at `countryCoords`.
-- **Persistent Multi-Pin Selection**:
-  - All country pins remain visible on the map at all times (unselected pins do not disappear).
-  - Clicking a pin toggles that country in `selectedFilters.Country` (multi-select).
-  - Selected country pins display at full opacity (1.0), while unselected pins remain visible at dimmed opacity (0.35).
-  - Bi-directional sync: clicking a pin toggles the Country dropdown checkbox and label; selecting/deselecting checkboxes updates pin opacities.
+### 2. Interactive Map (Country Polygon Highlighting)
+- **Leaflet GeoJSON Integration**: Map renders world country polygons using `countries.geo.json`.
+- **Polygon Highlighting & Opacity**:
+  - Countries without database entries are shaded in neutral gray (`#d1d5db`).
+  - Countries with database entries are colored with `--primary` (`#3081E6`).
+  - When no country is selected: all standard-holding countries display at normal opacity (`0.65`).
+  - When one or more countries are selected:
+    - Selected countries display bold highlight (`fillOpacity: 0.85`, dark outline).
+    - Unselected countries with standards remain colored at reduced opacity (`fillOpacity: 0.2`).
+    - Countries without standards remain gray.
+- **Multi-Country Interaction**:
+  - Clicking a country polygon toggles that country in `selectedFilters.Country`.
+  - Bi-directional sync: clicking a country updates the Country filter dropdown checkbox and label; selecting/deselecting checkboxes updates polygon styles.
 - **Map Container**: `<div id="map"></div>`
 
 ### 3. Results Display
 - **Card View**: Each standard rendered as a card with metadata
 - **Comparison Mode**: Users can select up to N standards to compare side-by-side (tracked in `selectedCompareIndices`)
 
-### 4. Parameter Display
+### 4. Parameter Display & Modal Legends
 Standards expose 11 parameter categories (hardcoded in `paramKeys` array in `app.js`):
 - Physical parameters, Absorbency, Other parameters, pH, Microbiological requirements, Sampling, Packaging, User Info, Chemical/heavy metal, Color fastness, Biocompatibility
+- **Status Icon Legend**: Both detail and comparison modals feature a footer legend:
+  - Green (`check_circle`): Included in the standard
+  - Red (`cancel`): Not included in the standard
+  - Yellow (`help_outline`): Data not accessible
 
 ## Common Development Tasks
 

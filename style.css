@@ -613,6 +613,29 @@ tbody tr:hover {
 .status-icon.red { color: var(--icon-red); }
 .status-icon.yellow { color: var(--icon-yellow); }
 
+/* Modal Legend Styling */
+.modal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-item .status-icon {
+    font-size: 20px;
+}
+
 @media (max-width: 768px) {
     .detail-grid { grid-template-columns: 1fr; }
     .compare-table td.row-label { font-size: 10px; width: 40%; }

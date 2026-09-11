@@ -16,34 +16,17 @@ const paramKeys = [
     { label: "BIOCOMPATIBILITY", key: "Biocompatibility" }
 ];
 
-// Country Lat/Long Coordinates
-const countryCoords = {
-    "Australia": [-25.2744, 133.7751],
-    "Bangladesh": [23.6850, 90.3563],
-    "Brazil": [-14.2350, -51.9253],
-    "China": [35.8617, 104.1954],
-    "Egypt": [26.8206, 30.8025],
-    "Ethiopia": [9.1450, 40.4897],
-    "Ghana": [7.9465, -1.0232],
-    "India": [20.5937, 78.9629],
-    "Indonesia": [-0.7893, 113.9213],
-    "Japan": [36.2048, 138.2529],
-    "Kenya": [-1.2921, 36.8219],
-    "Malawi": [-13.2543, 34.3015],
-    "Nepal": [28.3949, 84.1240],
-    "New Zealand": [-40.9006, 174.8860],
-    "Nigeria": [9.0820, 8.6753],
-    "Pakistan": [30.3753, 69.3451],
-    "Russian Federation": [61.5240, 105.3188],
-    "Russian federation": [61.5240, 105.3188],
-    "South Africa": [-30.5595, 22.9375],
-    "South Korea": [35.9078, 127.7669],
-    "Sri Lanka": [7.8731, 80.7718],
-    "Uganda": [1.3733, 32.2903],
-    "United Republic of Tanzania": [-6.3690, 34.8888],
-    "US": [37.0902, -95.7129],
-    "Zimbabwe": [-19.0154, 29.1549]
-};
+// GeoJSON Country Layers
+let countriesGeoData = null;
+let geojsonLayer = null;
+
+// Normalize names between data.json and countries.geo.json
+function normalizeCountryName(geoName) {
+    if (geoName === 'United States of America' || geoName === 'United States') return 'US';
+    if (geoName === 'Russia') return 'Russian Federation';
+    if (geoName === 'Tanzania') return 'United Republic of Tanzania';
+    return geoName;
+}
 
 // State Variables
 let currentData = [];
@@ -74,23 +57,12 @@ const compareCount = document.getElementById('compareCount');
 
 // Initialize Leaflet Map
 const map = L.map('map').setView([15, 20], 2);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_31xm_1_497050ee8f3aea2ffead19da', {
     attribution: '&copy; OpenStreetMap &copy; CARTO',
     subdomains: 'abcd',
-    maxZoom: 19
+    minZoom: 2,
+    maxZoom: 5
 }).addTo(map);
-
-// Map Gold Custom Marker Icon
-const goldIcon = L.divIcon({
-    className: 'custom-map-pin',
-    html: `<span class="material-symbols-outlined" style="color: #3081E6; font-size: 42px;">location_on</span>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32]
-});
-
-// Layer group to allow dynamic updating of markers
-const markersLayer = L.layerGroup().addTo(map);
-const countryMarkers = {};
 
 // Sort Helper Function
 function sortDataByField(dataArray, fieldKey, ascending = true) {
@@ -104,22 +76,25 @@ function sortDataByField(dataArray, fieldKey, ascending = true) {
     });
 }
 
-// Initialize Page
+// Initialize Page: Fetch both data.json and countries.geo.json
 window.addEventListener('DOMContentLoaded', () => {
-    fetch('data.json')
-        .then(response => response.json())
-        .then(data => {
-            database = data;
-            currentData = [...database];
-            populateFilterDropdowns();
-            initMapMarkers();
-            // Sort initial dataset alphabetically by Country
-            sortDataByField(currentData, 'Country', true);
-            renderTable(currentData);
-        })
-        .catch(error => {
-            console.error('Error loading database JSON:', error);
-        });
+    Promise.all([
+        fetch('data.json').then(r => r.json()),
+        fetch('countries.geo.json').then(r => r.json())
+    ])
+    .then(([data, geojson]) => {
+        database = data;
+        currentData = [...database];
+        countriesGeoData = geojson;
+        populateFilterDropdowns();
+        initGeoJsonMap();
+        // Sort initial dataset alphabetically by Country
+        sortDataByField(currentData, 'Country', true);
+        renderTable(currentData);
+    })
+    .catch(error => {
+        console.error('Error loading database or GeoJSON:', error);
+    });
 
     // Event Listeners
     searchInput.addEventListener('input', applyFilters);
@@ -143,31 +118,126 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Map Markers: Keep all pins persistent on the map; adjust opacity based on selection
-function initMapMarkers() {
-    markersLayer.clearLayers();
-    const allCountries = [...new Set(database.map(d => d.Country.trim()))].filter(c => countryCoords[c]);
+// Determine polygon style based on database presence and active selection
+function getCountryStyle(countryName) {
+    const count = database.filter(d => d.Country.trim() === countryName).length;
+    const hasEntries = count > 0;
+    const hasSelection = selectedFilters.Country.size > 0;
+    const isSelected = selectedFilters.Country.has(countryName);
 
-    allCountries.forEach(country => {
-        const count = database.filter(d => d.Country.trim() === country).length;
-        const marker = L.marker(countryCoords[country], { icon: goldIcon });
-        marker.bindTooltip(`<b>${country}</b> (${count} standard${count > 1 ? 's' : ''})`);
-        marker.on('click', () => {
-            toggleCountryFromMap(country);
-        });
-        markersLayer.addLayer(marker);
-        countryMarkers[country] = marker;
-    });
+    // Countries without entries are rendered gray
+    if (!hasEntries) {
+        return {
+            fillColor: '#d1d5db',
+            fillOpacity: 0.5,
+            color: '#94a3b8',
+            weight: 0.8
+        };
+    }
+
+    // Countries with entries
+    if (hasSelection) {
+        if (isSelected) {
+            return {
+                fillColor: '#1a56db',
+                fillOpacity: 0.85,
+                color: '#0f172a',
+                weight: 2
+            };
+        } else {
+            // Lower opacity for unselected countries with entries
+            return {
+                fillColor: '#3081E6',
+                fillOpacity: 0.2,
+                color: '#93c5fd',
+                weight: 1
+            };
+        }
+    }
+
+    // Default state for countries with entries (no selection active)
+    return {
+        fillColor: '#3081E6',
+        fillOpacity: 0.65,
+        color: '#1e66c4',
+        weight: 1.2
+    };
 }
 
-function updateMapMarkers() {
+// Update layer tooltip based on country selection
+function updateLayerTooltip(layer, country, count) {
     const hasSelection = selectedFilters.Country.size > 0;
-    Object.keys(countryMarkers).forEach(country => {
-        const marker = countryMarkers[country];
-        if (hasSelection) {
-            marker.setOpacity(selectedFilters.Country.has(country) ? 1.0 : 0.35);
-        } else {
-            marker.setOpacity(1.0);
+    const isSelected = selectedFilters.Country.has(country);
+    let text = `<b>${country}</b> (${count} standard${count > 1 ? 's' : ''})`;
+
+    if (isSelected) {
+        text += `<br><span style="font-size: 11px; color: #1e66c4; font-weight: 600;">Selected (click to remove)</span>`;
+    } else if (hasSelection) {
+        text += `<br><span style="font-size: 11px; color: #64748b;">Click to add to selection</span>`;
+    }
+
+    layer.unbindTooltip();
+    layer.bindTooltip(text, { sticky: true });
+}
+
+// Initialize GeoJSON world map layer
+function initGeoJsonMap() {
+    if (!countriesGeoData) return;
+    if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
+    }
+
+    geojsonLayer = L.geoJSON(countriesGeoData, {
+        style: feature => {
+            const country = normalizeCountryName(feature.properties.name);
+            return getCountryStyle(country);
+        },
+        onEachFeature: (feature, layer) => {
+            const rawName = feature.properties.name;
+            const country = normalizeCountryName(rawName);
+            const count = database.filter(d => d.Country.trim() === country).length;
+            const hasEntries = count > 0;
+
+            if (hasEntries) {
+                updateLayerTooltip(layer, country, count);
+
+                layer.on({
+                    mouseover: (e) => {
+                        const target = e.target;
+                        target.setStyle({
+                            weight: 2.5,
+                            color: '#181423'
+                        });
+                        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                            target.bringToFront();
+                        }
+                    },
+                    mouseout: (e) => {
+                        geojsonLayer.resetStyle(e.target);
+                    },
+                    click: () => {
+                        toggleCountryFromMap(country);
+                    }
+                });
+            } else {
+                layer.bindTooltip(`<b>${rawName}</b><br><span style="font-size: 11px; color: #64748b;">No standards recorded</span>`, { sticky: true });
+            }
+        }
+    }).addTo(map);
+}
+
+// Update all country polygon styles on filter change
+function updateMapStyles() {
+    if (!geojsonLayer) return;
+
+    geojsonLayer.eachLayer(layer => {
+        if (layer.feature && layer.feature.properties) {
+            const country = normalizeCountryName(layer.feature.properties.name);
+            const count = database.filter(d => d.Country.trim() === country).length;
+            layer.setStyle(getCountryStyle(country));
+            if (count > 0) {
+                updateLayerTooltip(layer, country, count);
+            }
         }
     });
 }
@@ -252,7 +322,7 @@ function applyFilters() {
     // Maintain current sorting field and order
     sortDataByField(currentData, lastSortedColumn, sortAscending);
     renderTable(currentData);
-    updateMapMarkers();
+    updateMapStyles();
 }
 
 // Reset Filters Function
