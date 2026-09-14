@@ -19,6 +19,8 @@ const paramKeys = [
 // GeoJSON Country Layers
 let countriesGeoData = null;
 let geojsonLayer = null;
+let disputedGeoData = null;
+let disputedLinesLayer = null;
 
 // Normalize names between data.json and countries.geo.json
 function normalizeCountryName(geoName) {
@@ -76,18 +78,21 @@ function sortDataByField(dataArray, fieldKey, ascending = true) {
     });
 }
 
-// Initialize Page: Fetch both data.json and countries.geo.json
+// Initialize Page: Fetch database, countries GeoJSON, and disputed boundaries
 window.addEventListener('DOMContentLoaded', () => {
     Promise.all([
         fetch('data.json').then(r => r.json()),
-        fetch('countries.geo.json').then(r => r.json())
+        fetch('countries.geo.json').then(r => r.json()),
+        fetch('disputed-boundaries.geo.json').then(r => r.json())
     ])
-    .then(([data, geojson]) => {
+    .then(([data, geojson, disputedJson]) => {
         database = data;
         currentData = [...database];
         countriesGeoData = geojson;
+        disputedGeoData = disputedJson;
         populateFilterDropdowns();
         initGeoJsonMap();
+        initDisputedBoundaries();
         // Sort initial dataset alphabetically by Country
         sortDataByField(currentData, 'Country', true);
         renderTable(currentData);
@@ -223,6 +228,31 @@ function initGeoJsonMap() {
                 layer.bindTooltip(`<b>${rawName}</b><br><span style="font-size: 11px; color: #64748b;">No standards recorded</span>`, { sticky: true });
             }
         }
+    }).addTo(map);
+}
+
+// Initialize Disputed Boundaries Layer (Dotted lines for LoC, LAC, etc.)
+function initDisputedBoundaries() {
+    if (!disputedGeoData) return;
+    if (disputedLinesLayer) {
+        map.removeLayer(disputedLinesLayer);
+    }
+
+    if (!map.getPane('disputedLinesPane')) {
+        map.createPane('disputedLinesPane');
+        map.getPane('disputedLinesPane').style.zIndex = 450;
+        map.getPane('disputedLinesPane').style.pointerEvents = 'none';
+    }
+
+    disputedLinesLayer = L.geoJSON(disputedGeoData, {
+        pane: 'disputedLinesPane',
+        style: {
+            color: '#334155',
+            weight: 1.5,
+            dashArray: '4, 4',
+            opacity: 0.9
+        },
+        interactive: false
     }).addTo(map);
 }
 

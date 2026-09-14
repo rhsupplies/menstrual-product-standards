@@ -17,11 +17,12 @@ Interactive web application for exploring, searching, and comparing menstrual pr
 
 ### Project Structure
 ```
-├── index.html         # Main entry point; contains header, map, controls, and results UI
-├── app.js            # Core application logic: data fetching, filtering, search, comparison
-├── style.css         # Styling with color variables and responsive layout
-├── data.json         # JSON database of menstrual product standards by country
-└── countries.geo.json # Lightweight GeoJSON boundary dataset for choropleth map highlighting
+├── index.html                   # Main entry point; contains header, map, controls, and results UI
+├── app.js                      # Core application logic: data fetching, filtering, search, comparison
+├── style.css                   # Styling with color variables and responsive layout
+├── data.json                   # JSON database of menstrual product standards by country
+├── countries.geo.json           # Lightweight GeoJSON boundary dataset for choropleth map highlighting
+└── disputed-boundaries.geo.json # GeoJSON overlay for disputed territory lines (LoC, LAC, Trans-Karakoram)
 ```
 
 ## Data Model
@@ -47,6 +48,10 @@ Each record contains:
 
 ### 2. Interactive Map (Country Polygon Highlighting)
 - **Leaflet GeoJSON Integration**: Map renders world country polygons using `countries.geo.json`.
+- **Boundary Compliance & Disputed Lines**:
+  - **India-Compliant Outer Boundary**: External boundary follows official Survey of India cartographic standards, encompassing Jammu & Kashmir, Ladakh, and Arunachal Pradesh.
+  - **Disputed Control Lines**: Line of Control (LoC), Line of Actual Control (LAC), and Trans-Karakoram Tract lines are loaded from `disputed-boundaries.geo.json` and rendered on a dedicated top pane (`zIndex: 450`) with dotted styling (`dashArray: '4, 4'`).
+  - **Neighboring Boundaries**: Pakistan (`PAK`) polygon is cleanly aligned to the LoC without overlapping geometry.
 - **Polygon Highlighting & Opacity**:
   - Countries without database entries are shaded in neutral gray (`#d1d5db`).
   - Countries with database entries are colored with `--primary` (`#3081E6`).
