@@ -102,6 +102,42 @@ h1 {
     background: #e5f3f9;
 }
 
+/* Regional Map Pin */
+.regional-pin-container {
+    background: transparent;
+    border: none;
+}
+
+.regional-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.regional-pin .material-symbols-outlined {
+    font-size: 34px;
+    color: #fabd2d;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+    transition: transform 0.2s ease, filter 0.2s ease;
+    user-select: none;
+}
+
+.regional-pin:hover .material-symbols-outlined {
+    transform: scale(1.2);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+.regional-pin.selected .material-symbols-outlined {
+    transform: scale(1.25);
+    filter: drop-shadow(0 4px 8px rgba(24, 20, 35, 0.7));
+}
+
+.regional-pin.dimmed {
+    opacity: 0.35;
+}
+
 /* Search and Filters Section */
 .controls-section {
     display: flex;

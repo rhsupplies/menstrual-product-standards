@@ -63,6 +63,14 @@ Each record contains:
 - **Multi-Country Interaction**:
   - Clicking a country polygon toggles that country in `selectedFilters.Country`.
   - Bi-directional sync: clicking a country updates the Country filter dropdown checkbox and label; selecting/deselecting checkboxes updates polygon styles.
+- **Regional Organization Pins**:
+  - When records have `Region === 'Regional'`, dedicated pins are placed on the map with color `#fabd2d`:
+    - United Nations — New York `[40.7489, -73.9680]`
+    - EDANA — Brussels `[50.8503, 4.3517]`
+    - EAS — Arusha, Tanzania `[-3.3869, 36.6830]`
+    - ARSO — Nairobi, Kenya `[-1.2921, 36.8219]`
+  - Clicking a pin filters data by that organization (`selectedFilters.Country`) just like clicking a country polygon.
+  - Interactive states: selected pin remains highlighted at full opacity (`1.0`); unselected pins dim to `0.35` when a selection is active.
 - **Map Container**: `<div id="map"></div>`
 
 ### 3. Results Display
@@ -79,10 +87,10 @@ Standards expose 11 parameter categories (hardcoded in `paramKeys` array in `app
 
 ## Common Development Tasks
 
-### Adding a New Country
-1. Add coordinate pair to `countryCoords` object in `app.js`
-2. Add standards record(s) to `data.json` with matching country name
-3. Map will auto-refresh; filters will populate dynamically
+### Adding a New Country or Regional Organization
+1. For standard countries: ensure country name matches `countries.geo.json` (or add an alias to `normalizeCountryName` in `app.js`).
+2. For regional organizations: set `"Region": "Regional"` in `data.json` and ensure coordinate mapping is configured in `regionalLocations` in `app.js`.
+3. Map will auto-refresh; filters and pins will populate dynamically.
 
 ### Adding a New Parameter
 1. Add entry to `paramKeys` array in `app.js` with `label` and `key`

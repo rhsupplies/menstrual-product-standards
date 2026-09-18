@@ -22,6 +22,16 @@ let geojsonLayer = null;
 let disputedGeoData = null;
 let disputedLinesLayer = null;
 
+// Regional Organization Locations (Used when Region === 'Regional')
+const regionalLocations = {
+    'United Nations': { name: 'New York', coords: [40.7489, -73.9680] },
+    'EDANA': { name: 'Brussels', coords: [50.8503, 4.3517] },
+    'EAS': { name: 'Arusha, Tanzania', coords: [-3.3869, 36.6830] },
+    'ARSO': { name: 'Nairobi, Kenya', coords: [-1.2921, 36.8219] }
+};
+let regionalMarkersLayer = null;
+const regionalMarkers = {};
+
 // Normalize names between data.json and countries.geo.json
 function normalizeCountryName(geoName) {
     if (geoName === 'United States of America' || geoName === 'United States') return 'US';
@@ -45,7 +55,7 @@ const selectedFilters = {
 };
 
 const filterLabels = {
-    Country: { id: 'countryFilterLabel', defaultText: 'Country: All', prefix: 'Country' },
+    Country: { id: 'countryFilterLabel', defaultText: 'Country/Region: All', prefix: 'Country/Region' },
     Income: { id: 'incomeFilterLabel', defaultText: 'Income Level: All', prefix: 'Income Level' },
     Product: { id: 'productFilterLabel', defaultText: 'Primary Product: All', prefix: 'Primary Product' },
     ISO: { id: 'isoFilterLabel', defaultText: 'ISO Participation: All', prefix: 'ISO Participation' }
@@ -93,6 +103,7 @@ window.addEventListener('DOMContentLoaded', () => {
         populateFilterDropdowns();
         initGeoJsonMap();
         initDisputedBoundaries();
+        initRegionalPins();
         // Sort initial dataset alphabetically by Country
         sortDataByField(currentData, 'Country', true);
         renderTable(currentData);
@@ -256,19 +267,102 @@ function initDisputedBoundaries() {
     }).addTo(map);
 }
 
-// Update all country polygon styles on filter change
-function updateMapStyles() {
-    if (!geojsonLayer) return;
+// Initialize Regional Organization Pins (#fabd2d)
+function initRegionalPins() {
+    if (regionalMarkersLayer) {
+        map.removeLayer(regionalMarkersLayer);
+    }
+    regionalMarkersLayer = L.layerGroup().addTo(map);
 
-    geojsonLayer.eachLayer(layer => {
-        if (layer.feature && layer.feature.properties) {
-            const country = normalizeCountryName(layer.feature.properties.name);
-            const count = database.filter(d => d.Country.trim() === country).length;
-            layer.setStyle(getCountryStyle(country));
-            if (count > 0) {
-                updateLayerTooltip(layer, country, count);
+    // Filter database for regional entries
+    const regionalEntries = database.filter(item => (item.Region || '').trim() === 'Regional');
+
+    // Group counts by country name
+    const regionalCounts = {};
+    regionalEntries.forEach(item => {
+        const c = item.Country.trim();
+        if (c) regionalCounts[c] = (regionalCounts[c] || 0) + 1;
+    });
+
+    Object.keys(regionalLocations).forEach(country => {
+        const count = regionalCounts[country] || 0;
+        if (count === 0) return;
+
+        const loc = regionalLocations[country];
+        const marker = L.marker(loc.coords, {
+            icon: L.divIcon({
+                className: 'regional-pin-container',
+                html: `<div class="regional-pin"><span class="material-symbols-outlined">location_on</span></div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                tooltipAnchor: [0, -30]
+            })
+        });
+
+        updateRegionalMarkerTooltip(marker, country, loc.name, count);
+
+        marker.on('click', () => {
+            toggleCountryFromMap(country);
+        });
+
+        regionalMarkers[country] = { marker, loc, count };
+        marker.addTo(regionalMarkersLayer);
+    });
+}
+
+function updateRegionalMarkerTooltip(marker, country, locName, count) {
+    const hasSelection = selectedFilters.Country.size > 0;
+    const isSelected = selectedFilters.Country.has(country);
+    let text = `<b>${country}</b> (${locName})<br>${count} regional standard${count > 1 ? 's' : ''}`;
+
+    if (isSelected) {
+        text += `<br><span style="font-size: 11px; color: #b47d06; font-weight: 600;">Selected (click to remove)</span>`;
+    } else if (hasSelection) {
+        text += `<br><span style="font-size: 11px; color: #64748b;">Click to add to selection</span>`;
+    }
+
+    marker.unbindTooltip();
+    marker.bindTooltip(text, { sticky: true, offset: [0, -28] });
+}
+
+// Update all country polygon and regional pin styles on filter change
+function updateMapStyles() {
+    if (geojsonLayer) {
+        geojsonLayer.eachLayer(layer => {
+            if (layer.feature && layer.feature.properties) {
+                const country = normalizeCountryName(layer.feature.properties.name);
+                const count = database.filter(d => d.Country.trim() === country).length;
+                layer.setStyle(getCountryStyle(country));
+                if (count > 0) {
+                    updateLayerTooltip(layer, country, count);
+                }
+            }
+        });
+    }
+
+    // Update regional pin styles
+    const hasSelection = selectedFilters.Country.size > 0;
+    Object.keys(regionalMarkers).forEach(country => {
+        const { marker, loc, count } = regionalMarkers[country];
+        const isSelected = selectedFilters.Country.has(country);
+
+        if (isSelected) {
+            marker.setOpacity(1.0);
+        } else if (hasSelection) {
+            marker.setOpacity(0.35);
+        } else {
+            marker.setOpacity(1.0);
+        }
+
+        const el = marker.getElement();
+        if (el) {
+            const pinEl = el.querySelector('.regional-pin');
+            if (pinEl) {
+                pinEl.classList.toggle('selected', isSelected);
+                pinEl.classList.toggle('dimmed', hasSelection && !isSelected);
             }
         }
+        updateRegionalMarkerTooltip(marker, country, loc.name, count);
     });
 }
 
