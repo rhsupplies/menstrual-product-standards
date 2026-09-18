@@ -247,7 +247,7 @@ function initDisputedBoundaries() {
     disputedLinesLayer = L.geoJSON(disputedGeoData, {
         pane: 'disputedLinesPane',
         style: {
-            color: '#334155',
+            color: '#ff2600',
             weight: 1.5,
             dashArray: '4, 4',
             opacity: 0.9
