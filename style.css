@@ -70,8 +70,8 @@ body {
 }
 
 .nav-btn:hover {
-    background-color: var(--primary);
-    color: #ffffff;
+    background-color: #D5D4D7;
+    color: #181423;
 }
 
 @media (max-width: 600px) {
