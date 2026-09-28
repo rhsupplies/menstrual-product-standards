@@ -732,6 +732,21 @@ tbody tr:hover {
 }
 
 @media (max-width: 768px) {
+
+    h1 {
+        font-family: 'Young Serif', serif;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        color: #181423;
+    }
+
+/* Header Section */
+header {
+    padding: 40px 20px 80px 20px;
+}
+   
+
     .detail-grid { grid-template-columns: 1fr; }
     .compare-table td.row-label { font-size: 10px; width: 40%; }
 
